@@ -1,0 +1,4 @@
+#!/Users/ysokov/PycharmProjects/ansible/.venv/bin/python
+# EASY-INSTALL-SCRIPT: 'ansible==2.9.23rc1.post0','ansible-console'
+__requires__ = 'ansible==2.9.23rc1.post0'
+__import__('pkg_resources').run_script('ansible==2.9.23rc1.post0', 'ansible-console')
