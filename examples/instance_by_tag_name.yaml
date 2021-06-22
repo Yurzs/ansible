@@ -1,0 +1,8 @@
+---
+
+- hosts: tag_Name_web_server  # tag Name value is web_server
+  connection: local
+  gather_facts: false
+  tasks:
+    - name: Example
+      command: time
