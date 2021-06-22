@@ -167,10 +167,13 @@ from boto import rds
 from boto import elasticache
 from boto import route53
 from boto import sts
+import boto.ec2.regioninfo
 
 from ansible.module_utils import six
 from ansible.module_utils import ec2 as ec2_utils
 from ansible.module_utils.six.moves import configparser
+
+boto.set_file_logger('boto','boto.log', level=2)
 
 HAS_BOTO3 = False
 try:
@@ -196,7 +199,7 @@ DEFAULTS = {
     'cache_max_age': '300',
     'cache_path': '~/.ansible/tmp',
     'destination_variable': 'public_dns_name',
-    'elasticache': 'True',
+    'elasticache': 'False',
     'eucalyptus': 'False',
     'eucalyptus_host': '',
     'expand_csv_tags': 'False',
@@ -212,9 +215,9 @@ DEFAULTS = {
     'group_by_instance_type': 'True',
     'group_by_key_pair': 'True',
     'group_by_platform': 'True',
-    'group_by_rds_engine': 'True',
-    'group_by_rds_parameter_group': 'True',
-    'group_by_region': 'True',
+    'group_by_rds_engine': 'False',
+    'group_by_rds_parameter_group': 'False',
+    'group_by_region': 'False',
     'group_by_route53_names': 'True',
     'group_by_security_group': 'True',
     'group_by_tag_keys': 'True',
@@ -227,14 +230,14 @@ DEFAULTS = {
     'pattern_exclude': '',
     'pattern_include': '',
     'rds': 'False',
-    'regions': 'all',
-    'regions_exclude': 'us-gov-west-1, cn-north-1',
+    'regions': 'croc',
+    'regions_exclude': '',
     'replace_dash_in_groups': 'True',
     'route53': 'False',
     'route53_excluded_zones': '',
     'route53_hostnames': '',
     'stack_filters': 'False',
-    'vpc_destination_variable': 'ip_address'
+    'vpc_destination_variable': 'ip_address',
 }
 
 
@@ -295,6 +298,7 @@ class Ec2Inventory(object):
             else:
                 data_to_print = self.json_format_dict(self.inventory, True)
 
+        self.group_by_region = False
         print(data_to_print)
 
     def is_cache_valid(self):
@@ -594,7 +598,16 @@ class Ec2Inventory(object):
             connect_args['aws_secret_access_key'] = role.credentials.secret_key
             connect_args['security_token'] = role.credentials.session_token
 
-        conn = module.connect_to_region(region, **connect_args)
+        endpoint = "api.cloud.croc.ru"
+        connect_args["region"] = boto.ec2.regioninfo.RegionInfo(
+            name="croc",
+            endpoint=endpoint,
+            connection_cls=boto.ec2.connection.EC2Connection,
+        )
+        conn = module.connect_to_region(
+            "croc",
+            **connect_args,
+        )
         # connect_to_region will fail "silently" by returning None if the region name is wrong or not supported
         if conn is None:
             self.fail_with_error("region name: %s likely not supported, or AWS is down.  connection to region failed." % region)
@@ -965,8 +978,8 @@ class Ec2Inventory(object):
             if self.nested_groups:
                 self.push_group(self.inventory, 'instances', instance.id)
 
-        # Inventory: Group by region
         if self.group_by_region:
+            boto.log.info("{2} REGIONS! {0}, {1}".format(region, hostname, self.group_by_region))
             self.push(self.inventory, region, hostname)
             if self.nested_groups:
                 self.push_group(self.inventory, 'regions', region)
@@ -1649,6 +1662,7 @@ class Ec2Inventory(object):
     def push(self, my_dict, key, element):
         ''' Push an element onto an array that may not have been defined in
         the dict '''
+        boto.log.info("{0}, {1}".format(key, element))
         group_info = my_dict.setdefault(key, [])
         if isinstance(group_info, dict):
             host_list = group_info.setdefault('hosts', [])
