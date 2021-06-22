@@ -1,0 +1,8 @@
+---
+
+- hosts: ru-msk-comp1p
+  connection: local
+  gather_facts: false
+  tasks:
+    - name: Example
+      command: time

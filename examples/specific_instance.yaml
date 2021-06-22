@@ -1,0 +1,8 @@
+---
+
+- hosts: i-1234ABCD
+  connection: local
+  gather_facts: false
+  tasks:
+    - name: Example
+      command: time
