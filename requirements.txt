@@ -1,0 +1,2 @@
+git+https://github.com/C2Devel/boto.git
+ansible==2.9
